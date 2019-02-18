@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">MobileMouse</string>
+    <string name="gyroscope_text">Giroscopio</string>
+    <string name="axe_x_text">X: %f</string>
+    <string name="axe_y_text">X: %f</string>
+    <string name="axe_z_text">X: %f</string>
+    <string name="accelerometer_text">Acelerómetro</string>
+    <string name="number_text">%d</string>
+</resources>
