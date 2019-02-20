@@ -6,4 +6,5 @@
     <string name="axe_z_text">X: %f</string>
     <string name="accelerometer_text">Acelerómetro</string>
     <string name="number_text">%d</string>
+    <string name="distance_text">Distance</string>
 </resources>

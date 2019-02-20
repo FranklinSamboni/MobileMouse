@@ -17,9 +17,11 @@ import android.os.Bundle
 import android.widget.ArrayAdapter
 import com.ex.franklinsamboni.mobilemouse.databinding.ActivityMainBinding
 import com.ex.franklinsamboni.mobilemouse.models.Plane
+import java.util.*
 
 const val REQUEST_ENABLE_BT = 100
 const val REQUEST_VISIBILITY_BT = 101
+const val WINDOW_LEGTH = 20
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
 
@@ -32,6 +34,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     lateinit var mArrayAdapter: ArrayAdapter<String>
     var knowDevices: MutableList<String> = mutableListOf()
 
+    var accList : MutableList<Plane> = mutableListOf()
+    var timeList : MutableList<Long> = mutableListOf()
+    var distList : MutableList<Plane> = mutableListOf()
+    var gravity :  MutableList<Float> = mutableListOf(0.0f,0.0f,9.8f)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +54,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         //mSensorGyr = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         mSensorAcc = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        /*mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         if(mBluetoothAdapter == null){
             print("El dispositivo no es compatible para usar Bluetooth")
         }
@@ -65,7 +71,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
 
         //val filter = IntentFilter(BluetoothDevice.ACTION_FOUND)
-        //registerReceiver(receiver,filter)
+        //registerReceiver(receiver,filter)*/
 
 
 
@@ -95,13 +101,56 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent?) {
         if(event != null){
             if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                binding.accelerometer = Plane(event.values[0],event.values[1],event.values[2])
+
+                val alpha: Float = 0.8f
+                // Isolate the force of gravity with the low-pass filter.
+                gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0]
+                gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1]
+                gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2]
+                // Remove the gravity contribution with the high-pass filter.
+                val linear_acceleration : MutableList<Float> = mutableListOf()
+                linear_acceleration.add(event.values[0] - gravity[0])
+                linear_acceleration.add(event.values[1] - gravity[1])
+                linear_acceleration.add(event.values[2] - gravity[2])
+
+
+                val acc = Plane(event.values[0],event.values[1],event.values[2])
+                val date: Calendar = Calendar.getInstance()
+                timeList.add(date.timeInMillis)
+                accList.add(acc)
+
+                if(accList.size == timeList.size && accList.size > (WINDOW_LEGTH +1)){
+                    var size = accList.size
+                    for( i in accList.indices ){
+                        val iio = (accList.size - (WINDOW_LEGTH +1) )
+                        val iif = iio + WINDOW_LEGTH
+                        if(i in iio..(iif - 1)){
+                            var deltaT = timeList[i+1] - timeList[i]
+                            var deltaD = deltaT.toFloat()
+                            deltaD = (deltaD/1000.0f)
+                            val distX = getDistance(accList[i].x,deltaD)
+                            val distY = getDistance(accList[i].y,deltaD)
+                            val distZ = getDistance(accList[i].z,deltaD)
+                            val dist = Plane(distX,distY,distZ)
+                            distList.add(dist)
+                            binding.gyroscope = dist
+                        }
+                    }
+                }
+
+                binding.accelerometer = acc
             }
             else if (event.sensor.type == Sensor.TYPE_GYROSCOPE) {
                 binding.gyroscope = Plane(event.values[0],event.values[1],event.values[2])
             }
         }
+    }
 
+    fun getDistance(acc: Float, time: Float): Float {
+        val time2 = (time * time)
+        val res = acc * time2
+        val to = (0.5f) * res
+        return  to
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
